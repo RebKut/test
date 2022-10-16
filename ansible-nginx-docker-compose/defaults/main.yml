@@ -1,0 +1,31 @@
+---
+# defaults file for ansible-nginx-docker-compose
+
+# Directory for config files used by docker-compose
+nginxdc_compose_cfg_dir: "/etc/compose/nginx"
+
+# Directory for external volumes 
+nginxdc_compose_data_dir: "/var/compose/nginx"
+
+# template for /etc/nginx/nginx.conf
+# (to override, use a file with a different path/name, target will 
+#  always be /etc/nginx/nginx.conf in the nginx container)
+nginxdc_nginx_conf_template: "nginx/nginx.conf"
+
+# site template(s) for /etc/nginx.d/
+# Default template is set up to use self-signed certificates
+# (to override, use a list of files with different path/names, target
+#  files will be copied to /etc/nginx/nginx.d/ using the basename )
+nginxdc_nginx_conf_d_templates:
+    - "nginx/conf.d/default.conf"
+
+# docker external volumes used by containers
+# (this variable normally does not require to be changed)
+#     name: volume name
+#     path_h: volume path in host
+#     path_c: volume path in container
+nginxdc_ext_volumes:
+  # nginx web root
+  - name: "nginx_var_www_html"
+    path_h: "{{ nginxdc_compose_data_dir }}/var_www_html"
+    path_c: "/var/www/html"

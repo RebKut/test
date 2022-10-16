@@ -1,0 +1,92 @@
+---
+# tasks file for ansible-nginx-docker-compose
+
+- name: "Install dependencies required by this role"
+  package:
+    name: "{{ item }}"
+  loop:
+    - docker
+    - docker-compose
+
+- name: "Create directories in host for config files"
+  file:
+    name: "{{ nginxdc_compose_cfg_dir }}/{{ item }}"
+    state: directory
+  loop:
+        - "nginx/conf.d"
+
+# This will create a dict from nginxdc_ext_volumes
+# so that we can get elements using the volume name as a key
+# e.g. to get the host path: 
+#  nginxdc_fact_vol_dict['nginx_var_www_html']['path_h']
+- name: "Create dict from nginxdc_ext_volumes"
+  set_fact:
+    nginxdc_fact_vol_dict: "{{ nginxdc_fact_vol_dict|default({}) | combine( {item.name: {'path_c':item.path_c, 'path_h':item.path_h} } ) }}"
+  loop: "{{ nginxdc_ext_volumes }}"
+  tags:
+    - nginxdc-compose-cfg
+    - nginxdc-volumes
+    - nginxdc-selfsigned
+
+- name: "Create docker compose file from template"
+  template:
+    src: "docker-compose.yml.j2"
+    dest: "{{ nginxdc_compose_cfg_dir }}/docker-compose.yml"
+  tags: nginxdc-compose-cfg
+
+- name: "Create nginx main configuration from template"
+  template:
+    src: "{{ nginxdc_nginx_conf_template }}.j2"
+    dest: "{{ nginxdc_compose_cfg_dir }}/nginx/nginx.conf"
+  tags: nginxdc-nginx-cfg
+
+- name: "Configure volumes"
+  block:
+    - name: "Check if paths used for docker volume exist"
+      stat:
+        path: "{{ item.path_h }}"
+      register: st
+      loop: "{{ nginxdc_ext_volumes }}"
+
+    - name: "Create paths used for docker volumes if needed"
+      file:
+        path: "{{ item.item.path_h }}"
+        state: "directory"
+        mode: '755'
+      when: item.stat.exists is not defined or not(item.stat.exists)
+      loop: "{{ st.results }}"
+
+    # Create docker volumes as bind mounts
+    # (i.e., all directories need to be created beforehand, 
+    #  all  NFS/CIFS/etc volumes need to be mounted beforehand )
+    - name: "Create docker volumes (bind mounts)"
+      docker_volume:
+        name: "{{ item.name }}"
+        driver_options:
+          type: "none"
+          o: "bind"
+          device: "{{ item.path_h }}"
+      loop: "{{ nginxdc_ext_volumes }}"
+  tags: nginxdc-volumes
+
+- name: "Create nginx site configuration from templates"
+  template:
+    src: "{{ item }}.j2"
+    dest: "{{ nginxdc_compose_cfg_dir }}/nginx/conf.d/{{ item | basename }}"
+  loop: "{{ nginxdc_nginx_conf_d_templates }}"
+  tags: nginxdc-nginx-site-cfg-create
+  
+- name: "Copy Cats"
+  copy:
+    src: "./ansible-nginx-docker-compose/templates/cat.jpg"
+    dest: "/var/compose/nginx/var_www_html/cat.jpg"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: "(Re-)start all compose services"
+  docker_compose:
+    project_src: "{{ nginxdc_compose_cfg_dir }}"
+    state: present
+    restarted: yes
+  tags: nginxdc-compose-restart
