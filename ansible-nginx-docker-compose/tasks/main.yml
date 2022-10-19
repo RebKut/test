@@ -79,7 +79,7 @@
 - name: "Copy Cats"
   copy:
     src: "./ansible-nginx-docker-compose/templates/cat.jpg"
-    dest: "/var/compose/nginx/var_www_html/cat.jpg"
+    dest: "{{ nginxdc_compose_data_dir }}/var_www_html/cat.jpg"
     owner: root
     group: root
     mode: '0644'
