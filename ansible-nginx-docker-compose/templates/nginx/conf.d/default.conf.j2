@@ -5,9 +5,9 @@ server {
         server_name _;
 
         root /var/www/html/;
-        index cat.jpg;
+        
+         location / {
+	 rewrite ^/$ /cat.jpg redirect;
+	 }
 
-        location / {
-                try_files $uri $uri/ =404;
-        }
 }
