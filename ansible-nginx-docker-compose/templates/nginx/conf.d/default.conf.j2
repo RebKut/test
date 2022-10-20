@@ -4,10 +4,10 @@ server {
 
         server_name _;
 
-        root /var/www/html/;
+        root /etc/nginx/;
         
          location / {
-	 rewrite ^/$ /cat.jpg redirect;
-	 }
+		 rewrite ^/$ /cat.jpg redirect;
+		 }
 
 }
