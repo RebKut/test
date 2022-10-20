@@ -1,15 +1,6 @@
 ---
 version: '3.5'
 
-volumes:
-  # using external volumes to prevent accidental data loss when containers are destroyed/rebuilt
-{% for vol in nginxdc_ext_volumes %}
-  {{ vol['name'] }}:
-    external: yes
-    name: {{ vol['name'] }}
-{% endfor %}
-
-
 services:
 
   nginx:
@@ -18,7 +9,3 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
-    volumes:
-      - {{ nginxdc_compose_cfg_dir }}/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - {{ nginxdc_compose_cfg_dir }}/nginx/conf.d:/etc/nginx/conf.d:ro
-      - nginx_var_www_html:{{ nginxdc_fact_vol_dict['nginx_var_www_html']['path_c'] }}
